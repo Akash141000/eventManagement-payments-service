@@ -13,7 +13,7 @@ import {
   ORDERS_PROCESSED_Q_PATTERN,
 } from 'src/util/constaints';
 
-@Controller()
+@Controller("/api/payments")
 export class PaymentController implements OnModuleInit {
   constructor(
     private readonly paymentService: PaymentService,
@@ -24,7 +24,7 @@ export class PaymentController implements OnModuleInit {
     this.paymentService.connectStripe();
   }
 
-  @Post('/api/payments/charge')
+  @Post('charge')
   async createCharge(
     @Body('orderId') orderId: number,
     @Body('amount') amount: number,
