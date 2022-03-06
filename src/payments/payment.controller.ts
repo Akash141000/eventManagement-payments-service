@@ -9,10 +9,13 @@ import { PaymentService } from '../payments/payment.service';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import {
   ORDERS_EXCHANGE,
-  ORDERS_PROCESSED_Q,
   ORDERS_PROCESSED_Q_PATTERN,
 } from 'src/util/constaints';
+import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { CreateChargeDto } from './dto/payment.dto';
 
+
+@ApiBearerAuth('access-token')
 @Controller("/api/payments")
 export class PaymentController implements OnModuleInit {
   constructor(
@@ -24,13 +27,13 @@ export class PaymentController implements OnModuleInit {
     this.paymentService.connectStripe();
   }
 
+
+  @ApiResponse({})
   @Post('charge')
   async createCharge(
-    @Body('orderId') orderId: number,
-    @Body('amount') amount: number,
-    @Body('ticketId') ticketId: string,
-    @Body('source') source: string,
+    @Body() createChargeDto:CreateChargeDto
   ) {
+    const {amount,orderId,source,ticketId} = createChargeDto;
     const didCharge = await this.paymentService.createCharge(amount, source);
     if (!didCharge) {
       throw new InternalServerErrorException();
@@ -39,7 +42,8 @@ export class PaymentController implements OnModuleInit {
     if (!result) {
       throw new InternalServerErrorException();
     }
-    this.amqp.publish(ORDERS_EXCHANGE, ORDERS_PROCESSED_Q_PATTERN, didCharge);
+    const eventData ={amount,orderId,source,ticketId,didCharge}
+    this.amqp.publish(ORDERS_EXCHANGE, ORDERS_PROCESSED_Q_PATTERN,{msg: eventData});
     return {
       response: {
         result: result,
